@@ -55,12 +55,7 @@ public final class CPU {
     }
 
     public void startLog() {
-        logging = true;
-        try {
-            w = new OutputStreamWriter(new FileOutputStream(new File("nesdebug.txt")), StandardCharsets.UTF_8); 
-        } catch (IOException e) {
-            System.err.println("Cannot create debug log" + e.getLocalizedMessage());
-        }
+      startLog("nesdebug.txt");
     }
 
     public void startLog(String path) {
@@ -135,22 +130,6 @@ public final class CPU {
         ram.read(0x4000); //attempt to sync the APU every cycle and make dmc irqs work properly, which they still don't. Feh.
         ++clocks;
 
-        //guard against overflows
-//        if ((A & 0xff) != A) {
-//            System.err.println("houston we have A problem");
-//        }
-//        if ((X & 0xff) != X) {
-//            System.err.println("houston we have X problem");
-//        }
-//        if ((Y & 0xff) != Y) {
-//            System.err.println("houston we have Y problem");
-//        }
-//        if ((S & 0xff) != S) {
-//            System.err.println("houston we have S problem");
-//        }
-//        if ((PC & 0xffff) != PC) {
-//            System.err.println("houston we have PC problem");
-//        }
         if (ram.apu.sprdma_count > 0) {
             ram.apu.sprdma_count--;
             if (ram.apu.sprdma_count == 0) {
@@ -1311,7 +1290,6 @@ public final class CPU {
     private void nmi() {
         idle = false;
         log("**NMI**");
-        //System.err.println("  NMI");
         push(PC >> 8); // high bit 1st
         push((PC) & 0xFF);// check that this pushes right address
         push(flagstobyte() & ~utils.BIT4);
@@ -1323,7 +1301,6 @@ public final class CPU {
     private void interrupt() {
         idle = false;
         log("**INTERRUPT**");
-        //System.err.println("IRQ " + interrupt);
         push(PC >> 8); // high bit 1st
         push(PC & 0xFF);// check that this pushes right address
         push(flagstobyte() & ~utils.BIT4);
@@ -1417,7 +1394,6 @@ public final class CPU {
         if (isTaken) {
             final int pcprev = PC + 1;// store prev. PC
             PC = rel();
-            // System.err.println(pcprev + " "+ PC);
             //page boundary penalty
             if ((pcprev & 0xff00) != (PC & 0xff00)) {
                 pb = 2;//page crossing for branch takes 2 cycles
@@ -1804,8 +1780,6 @@ public final class CPU {
 
         negativeFlag = ((statusbyte & utils.BIT7) != 0);
         overflowFlag = ((statusbyte & utils.BIT6) != 0);
-        //breakFlag = ((b & 32) != 0);
-        // unusedFlag = ((b & 16) != 0);
         // actually nestest wants the unused flag to always be zero,
         // and doesn't set the break flag with a plp
         decimalModeFlag = ((statusbyte & utils.BIT3) != 0);
