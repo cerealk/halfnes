@@ -69,13 +69,16 @@ public class Logger
   void logInstruction(int scanline, int pixel, int instr,
     int pc, CPURAM ram, String status)
   {
-    String op = String.format(this.opcodes[instr],
-            ram.read(pc),
-            ram.read(pc + 1),
-            pc + (byte) (ram.read(pc)) + 1);
-    logMessage(utils.hex(pc - 1) + " " + utils.hex(instr)
-            + String.format(" %-14s ", op)
-            + status + " CYC:" + pixel + " SL:" + scanline + "\n");
+    if (isLogging())
+    {
+      String op = String.format(this.opcodes[instr],
+              ram.read(pc),
+              ram.read(pc + 1),
+              pc + (byte) (ram.read(pc)) + 1);
+      logMessage(utils.hex(pc - 1) + " " + utils.hex(instr)
+              + String.format(" %-14s ", op)
+              + status + " CYC:" + pixel + " SL:" + scanline + "\n");
+    }
   }
 
   public static String[] opcodes() {

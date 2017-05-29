@@ -168,17 +168,10 @@ public final class CPU {
 
         pb = 0;
         final int instr = ram.read(PC++);
-        //note: 
-        if (getLogger().isLogging()) {
-            //that looks redundant, but this is a really expensive operation to create the log string
-            //also, logging *might* trigger side effects if logging while executing
-            //code from i/o registers (reading twice). So we don't want to do it always.
-            //TODO: Optimize this! It gets called a LOT
-            //and slows logging to 16 fps
-            //even when not actually writing anything
-          logInstruction(scanline, pixel, instr);
-        }
-        if (cycles == 0) {
+        //note:
+
+      logger.logInstruction(scanline, pixel, instr, PC, ram, status());
+      if (cycles == 0) {
             getLogger().flushLog();
         }
 
@@ -1791,11 +1784,6 @@ public final class CPU {
   private final void log(String tolog)
   {
     getLogger().logMessage(tolog);
-  }
-
-  private void logInstruction(int scanline, int pixel, int instr)
-  {
-    logger.logInstruction(scanline, pixel, instr, PC, ram, status());
   }
 
 }
