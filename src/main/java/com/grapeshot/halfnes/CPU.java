@@ -4,11 +4,7 @@
  */
 package com.grapeshot.halfnes;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 
 public final class CPU {
 
@@ -39,9 +35,14 @@ public final class CPU {
     private boolean dirtyBattletoadsHack = false;
     private int hackAddr = 0;
     private int hackData = 0;
-  public final Logger logger;
+    private final Logger logger;
 
-  private enum dummy {
+    public Logger getLogger()
+    {
+      return logger;
+    }
+
+    private enum dummy {
 
         ONCARRY, ALWAYS; //type of dummy read
     }
@@ -50,11 +51,8 @@ public final class CPU {
     public CPU(final CPURAM cpuram) {
         ram = cpuram;
         //ram is the ONLY thing the cpu tries to talk to.
-        logger = new Logger(this, false);
+        logger = new Logger(false);
 
-        if (logger.isLogging()) {
-            logger.startLog();
-        }
     }
 
   public void init() {
@@ -171,7 +169,7 @@ public final class CPU {
         pb = 0;
         final int instr = ram.read(PC++);
         //note: 
-        if (logger.isLogging()) {
+        if (getLogger().isLogging()) {
             //that looks redundant, but this is a really expensive operation to create the log string
             //also, logging *might* trigger side effects if logging while executing
             //code from i/o registers (reading twice). So we don't want to do it always.
@@ -187,7 +185,7 @@ public final class CPU {
                     + status() + " CYC:" + pixel + " SL:" + scanline + "\n");
         }
         if (cycles == 0) {
-            logger.flushLog();
+            getLogger().flushLog();
         }
 
         switch (instr) {
@@ -613,7 +611,7 @@ public final class CPU {
             case 0xd2:
             case 0xf2:
                 System.err.println("KIL - CPU locked");
-                logger.flushLog();
+                getLogger().flushLog();
                 ram.apu.nes.runEmulation = false;
                 break;
             // LAS (unofficial)
@@ -2061,67 +2059,7 @@ public final class CPU {
 
   public final void log(String tolog)
   {
-    logger.logMessage(tolog);
+    getLogger().logMessage(tolog);
   }
 
-  public static class Logger
-  {
-    private CPU cpu;
-    private boolean loggingEnabled;
-
-    public Logger(CPU cpu, boolean logging)
-    {
-      this.cpu = cpu;
-      loggingEnabled = logging;
-    }
-
-    public void logMessage(String tolog)
-    {
-      if (isLogging()) {
-          try {
-              cpu.w.write(tolog);
-          } catch (IOException e) {
-              System.err.println("Cannot write to debug log" + e.getLocalizedMessage());
-          }
-      }
-    }
-
-    public void flushLog() {
-          if (isLogging()) {
-              try {
-                  cpu.w.flush();
-              } catch (IOException e) {
-                  System.err.println("Cannot write to debug log" + e.getLocalizedMessage());
-              }
-          }
-      }
-
-    public void startLog(String path) {
-        setLogging(true);
-        try {
-            cpu.w = new OutputStreamWriter(new FileOutputStream(new File(path)), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            System.err.println("Cannot create debug log" + e.getLocalizedMessage());
-        }
-    }
-
-    public void startLog() {
-      startLog("nesdebug.txt");
-    }
-
-    public void stopLog() {
-          setLogging(false);
-          flushLog();
-      }
-
-    public boolean isLogging()
-    {
-      return loggingEnabled;
-    }
-
-    public void setLogging(boolean logging)
-    {
-      loggingEnabled = logging;
-    }
-  }
 }
