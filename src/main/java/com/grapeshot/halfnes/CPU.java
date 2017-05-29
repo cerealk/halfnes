@@ -6,7 +6,6 @@ package com.grapeshot.halfnes;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +20,8 @@ public final class CPU {
     private boolean carryFlag = false, zeroFlag = false,
             interruptsDisabled = true, decimalModeFlag = false;
     private boolean overflowFlag = false, negativeFlag = false,
-            previntflag = false, nmi = false, prevnmi = false, logging = false;
+            previntflag = false, nmi = false, prevnmi = false;
+    private boolean logging = false;
     private int pb = 0;// set to 1 if access crosses page boundary
     public int interrupt = 0;
     public boolean nmiNext = false, idle = false;
@@ -39,8 +39,9 @@ public final class CPU {
     private boolean dirtyBattletoadsHack = false;
     private int hackAddr = 0;
     private int hackData = 0;
+  public final Logger logger;
 
-    private static enum dummy {
+  private enum dummy {
 
         ONCARRY, ALWAYS; //type of dummy read
     }
@@ -49,30 +50,14 @@ public final class CPU {
     public CPU(final CPURAM cpuram) {
         ram = cpuram;
         //ram is the ONLY thing the cpu tries to talk to.
-        if (logging) {
-            startLog();
+        logger = new Logger(this, false);
+
+        if (logger.isLogging()) {
+            logger.startLog();
         }
     }
 
-    public void startLog() {
-      startLog("nesdebug.txt");
-    }
-
-    public void startLog(String path) {
-        logging = true;
-        try {
-            w = new OutputStreamWriter(new FileOutputStream(new File(path)), StandardCharsets.UTF_8); 
-        } catch (IOException e) {
-            System.err.println("Cannot create debug log" + e.getLocalizedMessage());
-        }
-    }
-
-    public void stopLog() {
-        logging = false;
-        flushLog();
-    }
-
-    public void init() {
+  public void init() {
         init(null);
     }
 
@@ -186,7 +171,7 @@ public final class CPU {
         pb = 0;
         final int instr = ram.read(PC++);
         //note: 
-        if (logging) {
+        if (logger.isLogging()) {
             //that looks redundant, but this is a really expensive operation to create the log string
             //also, logging *might* trigger side effects if logging while executing
             //code from i/o registers (reading twice). So we don't want to do it always.
@@ -202,7 +187,7 @@ public final class CPU {
                     + status() + " CYC:" + pixel + " SL:" + scanline + "\n");
         }
         if (cycles == 0) {
-            flushLog();
+            logger.flushLog();
         }
 
         switch (instr) {
@@ -628,7 +613,7 @@ public final class CPU {
             case 0xd2:
             case 0xf2:
                 System.err.println("KIL - CPU locked");
-                flushLog();
+                logger.flushLog();
                 ram.apu.nes.runEmulation = false;
                 break;
             // LAS (unofficial)
@@ -2074,23 +2059,69 @@ public final class CPU {
         log("**PC SET**");
     }
 
-    public final void log(String tolog) {
-        if (logging) {
-            try {
-                w.write(tolog);
-            } catch (IOException e) {
-                System.err.println("Cannot write to debug log" + e.getLocalizedMessage());
-            }
+  public final void log(String tolog)
+  {
+    logger.logMessage(tolog);
+  }
+
+  public static class Logger
+  {
+    private CPU cpu;
+    private boolean loggingEnabled;
+
+    public Logger(CPU cpu, boolean logging)
+    {
+      this.cpu = cpu;
+      loggingEnabled = logging;
+    }
+
+    public void logMessage(String tolog)
+    {
+      if (isLogging()) {
+          try {
+              cpu.w.write(tolog);
+          } catch (IOException e) {
+              System.err.println("Cannot write to debug log" + e.getLocalizedMessage());
+          }
+      }
+    }
+
+    public void flushLog() {
+          if (isLogging()) {
+              try {
+                  cpu.w.flush();
+              } catch (IOException e) {
+                  System.err.println("Cannot write to debug log" + e.getLocalizedMessage());
+              }
+          }
+      }
+
+    public void startLog(String path) {
+        setLogging(true);
+        try {
+            cpu.w = new OutputStreamWriter(new FileOutputStream(new File(path)), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            System.err.println("Cannot create debug log" + e.getLocalizedMessage());
         }
     }
 
-    private void flushLog() {
-        if (logging) {
-            try {
-                w.flush();
-            } catch (IOException e) {
-                System.err.println("Cannot write to debug log" + e.getLocalizedMessage());
-            }
-        }
+    public void startLog() {
+      startLog("nesdebug.txt");
     }
+
+    public void stopLog() {
+          setLogging(false);
+          flushLog();
+      }
+
+    public boolean isLogging()
+    {
+      return loggingEnabled;
+    }
+
+    public void setLogging(boolean logging)
+    {
+      loggingEnabled = logging;
+    }
+  }
 }

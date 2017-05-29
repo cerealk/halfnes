@@ -28,7 +28,7 @@ public class NesTest
     nes.setControllers(mock(ControllerInterface.class), mock(ControllerInterface.class));
 
     //log all instructions executed to compare with real nestest.log
-    nes.getCPU().startLog("src/test/resources/nestest/compare.log");
+    nes.getCPU().logger.startLog("src/test/resources/nestest/compare.log");
     while (nes.runEmulation)
     {
       //runs until hits a KIL opcode which is a few instructions after the
@@ -58,7 +58,7 @@ public class NesTest
     nes.setControllers(mock(ControllerInterface.class), mock(ControllerInterface.class));
 
     //log all instructions executed to compare with real nestest.log
-    nes.getCPU().startLog("src/test/resources/nestest/compare.log");
+    nes.getCPU().logger.startLog("src/test/resources/nestest/compare.log");
     while (nes.runEmulation)
     {
       //runs until hits a KIL opcode which is a few instructions after the
